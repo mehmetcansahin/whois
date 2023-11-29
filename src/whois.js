@@ -1,37 +1,37 @@
-import {connect} from 'cloudflare:sockets';
+import {connect} from 'cloudflare:sockets'
 
 async function readStreamAsString(readableStream) {
-    const reader = readableStream.getReader();
-    const decoder = new TextDecoder('utf-8');
-    let result = '';
-    let done, value;
+    const reader = readableStream.getReader()
+    const decoder = new TextDecoder('utf-8')
+    let result = ''
+    let done, value
     try {
         while (true) {
-            ({done, value} = await reader.read());
+            ({done, value} = await reader.read())
             if (done) {
-                break;
+                break
             }
-            result += decoder.decode(value, {stream: true});
+            result += decoder.decode(value, {stream: true})
         }
-        result += decoder.decode();
+        result += decoder.decode()
     } catch (error) {
-        console.error('Error:', error);
-        throw error;
+        console.error('Error:', error)
+        throw error
     } finally {
-        reader.releaseLock();
+        reader.releaseLock()
     }
 
-    return result;
+    return result
 }
 
 async function connectAndReadString(hostname, domain) {
-    const tcpAddress = {hostname: hostname, port: 43};
+    const tcpAddress = {hostname: hostname, port: 43}
     try {
-        const socket = connect(tcpAddress);
+        const socket = connect(tcpAddress)
         const writer = socket.writable.getWriter()
-        const encoder = new TextEncoder();
-        const encoded = encoder.encode(domain + "\r\n");
-        await writer.write(encoded);
+        const encoder = new TextEncoder()
+        const encoded = encoder.encode(domain + "\r\n")
+        await writer.write(encoded)
         return socket.readable
     } catch (error) {
         console.log("Error", error)
@@ -48,7 +48,7 @@ export const whois = async (c) => {
     let regex = /Registrar WHOIS Server: (\S+)/
     let match = internicWhois.match(regex)
 
-    let result;
+    let result
     if (match) {
         socketReadable = await connectAndReadString(match[1], domain)
         result = await readStreamAsString(socketReadable)
@@ -56,5 +56,5 @@ export const whois = async (c) => {
     } else {
         result = internicWhois
     }
-    return c.text(result)
+    return c.html(result.replace(/\n/g, "<br>"))
 }
